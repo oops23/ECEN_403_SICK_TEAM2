@@ -52,6 +52,7 @@ The system consists of three major subsystems:
 ---
 
 ## 📁 Repository Structure
+```
 ECEN_403_SICK_TEAM2/
 ├── capstone_ws/                 # Main ROS2 workspace for the LiDAR + simulation subsystem
 │   ├── src/
@@ -73,6 +74,7 @@ ECEN_403_SICK_TEAM2/
 ├── LiDARscripts/                # LiDAR processing experiments (DBSCAN tests, filtering trials)
 │
 └── README.md                    # Project documentation
+```
 
 ---
 
