@@ -19,9 +19,9 @@ We use:
 | Name | Role | Contributions |
 |------|------|----------------|
 | **Paavan Bagla** | LiDAR Subsystem Lead | LiDAR data processing, Gazebo robot simulation, filtering pipeline, workspace + launch files |
-| **(Add Teammate 2)** | (Role) | (Work done) |
-| **(Add Teammate 3)** | (Role) | (Work done) |
-| **(Add Teammate 4)** | (Role) | (Work done) |
+| **Jason Agnew** | Camera UI Lead | (Work done) |
+| **Josiah Faircloth** | Embedded Systems Lead | (Work done) |
+| **Samuel Ramos** | Power Management Lead | (Work done) |
 
 *(Fill in the rest — I can help format their contributions if you give me names + work)*
 
