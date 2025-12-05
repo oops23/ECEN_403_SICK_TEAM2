@@ -29,7 +29,7 @@ def capture_image(save_dir="/home/josiah/test"):
         
         # Capture image via USB camera
         subprocess.run(
-            ["fswebcam", "-r", "640x480", image_path],
+            ["fswebcam", "-r", "640x480", image_path], # max resolution: 3264x2448, default: 640x480
             check=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL

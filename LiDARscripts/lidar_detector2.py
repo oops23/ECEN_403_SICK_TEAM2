@@ -18,13 +18,12 @@ from sklearn.cluster import DBSCAN
 # -------------------------------
 # Configuration Parameters
 # -------------------------------
-SCAN_FILE = "lidar_log_11-14-2025_15.47.05.jsonl"  # LiDAR data file 
-EPS = 0.3        # DBSCAN cluster distance threshold (meters) - minimum distance between points in a cluster
-MIN_SAMPLES = 5   # minimum points per cluster
+SCAN_FILE = "lidar_log_11-25-2025_13.07.11.jsonl"  # LiDAR data file 
+EPS = 0.25        # DBSCAN cluster distance threshold (meters) - minimum distance between points in a cluster
+MIN_SAMPLES = 2   # minimum points per cluster
 NEW_OBJ_DIST = 0.3  # meters: if a centroid is this far from all previous, treat as new
 OBJECT_MEMORY_TIME = 0.5  # seconds: remember objects for this long after last seen
 MIN_DETECTIONS = 5  # number of consecutive scans object must appear before triggering
-MOVEMENT_THRESHOLD = 0.5  # meters: total movement to trigger even for known objects
 DISPLAY = True
 
 # -------------------------------
@@ -34,6 +33,7 @@ def on_new_object_detected(centroid, timestamp):
     """Called whenever a new cluster appears that wasn't present before."""
 
     print(f"[ALERT] New object detected at {centroid} at {timestamp:.2f}")
+    
 
 # -------------------------------
 # Helper Functions
@@ -63,13 +63,12 @@ def detect_objects(points):
 
 class ObjectTracker:
     """Tracks known objects over time with memory persistence and confirmation"""
-    def __init__(self, memory_time=2.0, distance_threshold=0.4, min_detections=3, movement_threshold=0.5):
-        self.confirmed_objects = []  # List of (centroid, last_seen_time, first_position)
+    def __init__(self, memory_time=2.0, distance_threshold=0.4, min_detections=3):
+        self.confirmed_objects = []  # List of (last_seen_time, first_position)
         self.candidate_objects = []  # List of (centroid, first_seen_time, detection_count)
         self.memory_time = memory_time
         self.distance_threshold = distance_threshold
         self.min_detections = min_detections
-        self.movement_threshold = movement_threshold
         self.first_scan = True
     
     def update(self, current_centroids, current_time):
@@ -77,12 +76,12 @@ class ObjectTracker:
         # On first scan, add all objects without triggering
         if self.first_scan:
             for centroid in current_centroids:
-                self.confirmed_objects.append((centroid, current_time, centroid.copy()))
+                self.confirmed_objects.append((current_time, centroid.copy()))
             self.first_scan = False
             return np.array([]).reshape(0, 2)
         
         # Clean up old confirmed objects
-        self.confirmed_objects = [(pos, t, first_pos) for pos, t, first_pos in self.confirmed_objects 
+        self.confirmed_objects = [(t, first_pos) for t, first_pos in self.confirmed_objects 
                                   if current_time - t < self.memory_time]
         
         # Clean up old candidates
@@ -90,7 +89,6 @@ class ObjectTracker:
                                   if current_time - first_t < self.memory_time]
         
         new_objects = []
-        movement_objects = []
         matched_candidates = set()
         matched_confirmed = set()
         
@@ -99,21 +97,14 @@ class ObjectTracker:
             matched_confirmed_obj = False
             
             # Check if matches a confirmed object
-            for i, (known_pos, last_time, first_pos) in enumerate(self.confirmed_objects):
-                dist = np.linalg.norm(centroid - known_pos)
+            for i, (last_time, first_pos) in enumerate(self.confirmed_objects):
+                dist = np.linalg.norm(centroid - first_pos)
                 if dist < self.distance_threshold:
-                    # Update position and time
-                    self.confirmed_objects[i] = (centroid, current_time, first_pos)
+                    # Update time
+                    self.confirmed_objects[i] = (current_time, first_pos)
                     matched_confirmed.add(i)
                     matched_confirmed_obj = True
-                    
-                    # Check for significant movement from original position
-                    total_movement = np.linalg.norm(centroid - first_pos)
-                    if total_movement > self.movement_threshold:
-                        movement_objects.append(centroid)
-                        # Reset first position to track next movement
-                        self.confirmed_objects[i] = (centroid, current_time, centroid.copy())
-                    break
+                   
                 
             if matched_confirmed_obj:
                 continue
@@ -127,7 +118,7 @@ class ObjectTracker:
                     if new_count >= self.min_detections:
                         # Promote to confirmed and trigger
                         new_objects.append(centroid)
-                        self.confirmed_objects.append((centroid, current_time, centroid.copy()))
+                        self.confirmed_objects.append((current_time, centroid))
                         matched_candidates.add(i)
                     else:
                         # Update candidate
@@ -144,11 +135,9 @@ class ObjectTracker:
         self.candidate_objects = [c for i, c in enumerate(self.candidate_objects) 
                                   if i not in matched_candidates or c[2] < self.min_detections]
         
-        # Combine new objects and movement triggers
-        all_triggers = new_objects + movement_objects
         
-        if all_triggers:
-            return np.array(all_triggers).reshape(-1, 2)
+        if new_objects:
+            return np.array(new_objects).reshape(-1, 2)
         else:
             return np.array([]).reshape(0, 2)
 
@@ -160,7 +149,6 @@ def main():
         memory_time=OBJECT_MEMORY_TIME, 
         distance_threshold=NEW_OBJ_DIST,
         min_detections=MIN_DETECTIONS,
-        movement_threshold=MOVEMENT_THRESHOLD
     )
     plt.ion()
     fig, ax = plt.subplots(figsize=(10, 10))
@@ -196,7 +184,7 @@ def main():
                     ax.legend(loc='upper right')
                     ax.set_aspect('equal')
                     plt.pause(0.01)
-                time.sleep(0.05)
+                #time.sleep(0.05)
             except json.JSONDecodeError:
                 continue
 
